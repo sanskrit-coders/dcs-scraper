@@ -84,8 +84,18 @@
     </dependency>
     <dependency>
         <groupId>com.github.sanskrit-coders</groupId>
+        <artifactId>couchbase-lite-desktop</artifactId>
+        <version>1.2</version>
+    </dependency>
+    <dependency>
+        <groupId>com.github.sanskrit-coders</groupId>
         <artifactId>db-interface</artifactId>
-        <version>1.5</version>
+        <version>1.6</version>
+    </dependency>
+    <dependency>
+        <groupId>net.ruippeixotog</groupId>
+        <artifactId>scala-scraper_2.11</artifactId>
+        <version>1.2.1</version>
     </dependency>
     <dependency>
         <groupId>org.json4s</groupId>
