@@ -67,15 +67,13 @@ class DictCouchbaseLiteDB() {
     return true
   }
 
-  def updateSentenceDb(dcsSentences: Seq[DcsSentence]): Boolean = {
-    dcsSentences.foreach(dcsSentence => {
-      val jsonMap = jsonHelper.getJsonMap(dcsSentence)
-      if (dcsSentence.dcsId % 50 == 0) {
-        log debug (jsonMap.toString())
-      }
-      //    sys.exit()
-      booksDb.updateDocument(dcsSentence.getKey, jsonMap)
-    })
+  def updateSentenceDb(dcsSentence: DcsSentence): Boolean = {
+    val jsonMap = jsonHelper.getJsonMap(dcsSentence)
+    if (dcsSentence.dcsId % 50 == 0) {
+      log debug (jsonMap.toString())
+    }
+    //    sys.exit()
+    sentencesDb.updateDocument(dcsSentence.getKey, jsonMap)
     return true
   }
 }
