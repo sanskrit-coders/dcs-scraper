@@ -92,6 +92,7 @@ object dcsScraper {
     val dcsDb = new DictCouchbaseLiteDB
     dcsDb.openDatabasesLaptop()
     dcsDb.replicateAll()
+    var numSentenceFailures = 0
     books.foreach(book => {
       log.info(s"Starting on book ${book.title}")
       scrapeChapterList(book)
@@ -100,13 +101,21 @@ object dcsScraper {
         log.info(s"Processing book ${book.title} - ${chapter.dcsName}")
         val sentences = scrapeSentences(chapter)
         sentences.foreach(s => {
-          scrapeAnalysis(s)
+          try {
+            scrapeAnalysis(s)
+          } catch {
+            case e: Exception => {
+              log.error(s"Alas! can't analyze $s. Error: ${e.toString}")
+              numSentenceFailures = numSentenceFailures + 1
+            }
+          }
           dcsDb.updateSentenceDb(s)
         })
       })
       //      log.info(s"Fetched book ${book.title}")
       //      dcsDb.updateBooksDb(book)
     })
+    log.error(s"Failed analysis on $numSentenceFailures sentences.")
     dcsDb.closeDatabases
   }
 }
