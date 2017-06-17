@@ -4,7 +4,7 @@ import dbSchema.dcs.{DcsBook, DcsChapter, DcsSentence, DcsWord}
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.util.matching.Regex
 
 object dcsScraper {
@@ -86,36 +86,41 @@ object dcsScraper {
 //    log.debug(sentence.toString)
   }
 
+  def storeBook(book: DcsBook, dcsDb: DcsCouchbaseLiteDB) : Int= {
+    var numSentenceFailures = 0
+    log.info(s"Starting on book ${book.title}")
+    scrapeChapterList(book)
+    book.chapters.get.foreach(chapter => {
+      //        scrapeChapter(chapter)
+      log.info(s"Processing book ${book.title} - ${chapter.dcsName}")
+      val sentences = scrapeSentences(chapter)
+      sentences.foreach(s => {
+        try {
+          scrapeAnalysis(s)
+        } catch {
+          case e: Exception => {
+            log.error(s"Alas! can't analyze $s. Error: ${e.toString}")
+            numSentenceFailures = numSentenceFailures + 1
+          }
+        }
+        dcsDb.updateSentenceDb(s)
+        //      log.info(s"Fetched book ${book.title}")
+        //      dcsDb.updateBooksDb(book)
+      })
+    })
+    return numSentenceFailures
+  }
 
   def main(args: Array[String]): Unit = {
     var books = scrapeBookList
-    val dcsDb = new DictCouchbaseLiteDB
+    val dcsDb = new DcsCouchbaseLiteDB
     dcsDb.openDatabasesLaptop()
     dcsDb.replicateAll()
-    var numSentenceFailures = 0
-    books.foreach(book => {
-      log.info(s"Starting on book ${book.title}")
-      scrapeChapterList(book)
-      book.chapters.get.foreach(chapter => {
-        //        scrapeChapter(chapter)
-        log.info(s"Processing book ${book.title} - ${chapter.dcsName}")
-        val sentences = scrapeSentences(chapter)
-        sentences.foreach(s => {
-          try {
-            scrapeAnalysis(s)
-          } catch {
-            case e: Exception => {
-              log.error(s"Alas! can't analyze $s. Error: ${e.toString}")
-              numSentenceFailures = numSentenceFailures + 1
-            }
-          }
-          dcsDb.updateSentenceDb(s)
-        })
-      })
-      //      log.info(s"Fetched book ${book.title}")
-      //      dcsDb.updateBooksDb(book)
+    var bookFailureMap = mutable.HashMap[String, Int]()
+    books.dropWhile(!_.title.startsWith("Bhāratamañjarī")).foreach(book => {
+      bookFailureMap += Tuple2(book.title, (storeBook(book=book, dcsDb=dcsDb)))
     })
-    log.error(s"Failed analysis on $numSentenceFailures sentences.")
+    log.error(s"Failures: ${bookFailureMap.mkString("\n")}")
     dcsDb.closeDatabases
   }
 }

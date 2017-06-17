@@ -18,9 +18,9 @@
   * Present it in a format better suited for consumption by the broader Sanskrit programming community.
 
 ## Motivation
-The DCS web interface was inadequate to address the following needs.
-  * Unblock NLP work: People enthusiastic about applying machine learning tools to Sanskrit language data are hampered by lack of access to such data in a convenient format.
-  * The valuable analysis results could be exploited and presented to end users in many more creative ways.
+This database copy aims to augment DCS web interface and address the following shortcomings:
+  * __Unblock NLP work__: People enthusiastic about applying machine learning tools to Sanskrit language data are hampered by lack of access to such data in a convenient format.
+  * __Unblock UI work__: The valuable analysis could be presented to end users in many more creative ways.
 
 ## License and origin acknowledgement
 This builds on the foundational work by the DCS team headed by Oliver. See [LICENSE](LICENSE.md) file.
@@ -28,10 +28,13 @@ This builds on the foundational work by the DCS team headed by Oliver. See [LICE
 # Resultant Database
 ## API-s
 * Get analysis for a sentence: [api](http://vvasuki.hopto.org:5984/dcs_sentences/sentence_354341), with [this](https://pastebin.com/d3td7qge) output.
-*
+* Get chapters and sentences in a book: [api](http://vvasuki.hopto.org:5984/dcs_books/book_1) with [this](https://pastebin.com/NwdiFKCD) result.
+
+## Dump files
+* As a couchbase lite database here.
 
 # Databse Deployment
-## Database repilicas
+## Database replicas
 * You want to host a repilica and make things faster for folks in your geographical area? Just open an issue in this project and let us know.
 * Ahmedabad, IN <http://vedavaapi.org:5984/dcs_sentences/_all_docs>
 * Bay area, USA (dev machine, unstable) <http://vvasuki.hopto.org:5984/dcs_sentences/_all_docs>

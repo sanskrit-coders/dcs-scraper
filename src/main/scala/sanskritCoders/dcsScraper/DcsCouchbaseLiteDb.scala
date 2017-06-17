@@ -2,27 +2,17 @@ package sanskritCoders.dcsScraper
 
 import _root_.java.io.File
 
-import com.couchbase.lite.auth.BasicAuthenticator
-import dbSchema.common.ScriptRendering
 import dbSchema.dcs.{DcsBook, DcsSentence}
-import dbSchema.dictionary.{DictEntry, DictLocation}
-import dbUtils.{collectionUtils, jsonHelper}
+import dbUtils.jsonHelper
 import sanskrit_coders.db.couchbaseLite.CouchbaseLiteDb
 
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
-import scala.io.StdIn
-
 //import com.couchbase.lite.{Database, Manager, JavaContext, Document, UnsavedRevision, Query, ManagerOptions}
-import com.couchbase.lite.util.Log
-import com.couchbase.lite.{Database, Manager, JavaContext, Document, UnsavedRevision, Query, ManagerOptions}
+import com.couchbase.lite.{Database, JavaContext, Manager}
 //import org.json4s.jackson.Serialization
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
-
 // This version of the database uses Java (rather than Android) API.
-class DictCouchbaseLiteDB() {
+class DcsCouchbaseLiteDB() {
   implicit def databaseToCouchbaseLiteDb(s: Database) = new CouchbaseLiteDb(s)
   val log = LoggerFactory.getLogger(getClass.getName)
   var booksDb: Database = null
