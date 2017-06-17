@@ -12,12 +12,11 @@
 # Databse Deployment
 ## Database repilicas
 * You want to host a repilica and make things faster for folks in your geographical area? Just open an issue in this project and let us know.
-* Ahmedabad, IN <http://vedavaapi.org:5984/dict_entries/_all_docs>
-* Bay area, USA (dev machine, unstable) <http://vvasuki.hopto.org:5984/dict_entries/_all_docs>
+* Ahmedabad, IN <http://vedavaapi.org:5984/dcs_sentences/_all_docs>
+* Bay area, USA (dev machine, unstable) <http://vvasuki.hopto.org:5984/dcs_sentences/_all_docs>
 
 ## UI deployments
-* You can use it right off github!
-* You want to host copies (or even develop a superior UI?) and make things faster for folks in your geographical area? Just open an issue in this project and let us know. We'd love to list it here.
+* Nothing yet.
 
 
 # Database and packaging software developer instructions
