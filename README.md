@@ -19,7 +19,7 @@
 
 ## Motivation
 This database copy aims to augment DCS web interface and address the following shortcomings:
-  * __Unblock NLP work__: People enthusiastic about applying machine learning tools to Sanskrit language data are hampered by lack of access to such data in a convenient format.
+  * __Unblock NLP work__: People enthusiastic about applying machine learning tools to Sanskrit language data are hampered by lack of access to such data in a convenient format. Examples: [201706](https://groups.google.com/d/msg/sanskrit-programmers/2uwvGmrfI68/Pt8hMB3XAAAJ), [201607](https://groups.google.com/forum/#!searchin/sanskrit-programmers/DCS|sort:relevance/sanskrit-programmers/Zdj80IzI--U/G-zJEXgYCAAJ), [201605](https://groups.google.com/forum/#!searchin/sanskrit-programmers/DCS|sort:relevance/sanskrit-programmers/GMDUKF7zCaM/bOAAnNdkCQAJ)
   * __Unblock UI work__: The valuable analysis could be presented to end users in many more creative ways.
 
 ## License and origin acknowledgement
