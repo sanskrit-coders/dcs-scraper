@@ -75,7 +75,7 @@ class DcsChapterWrapper(chapter: DcsChapter) {
       try {
         s.scrapeAnalysis()
       } catch {
-        case e: Exception => {
+        case e: NoSuchElementException => {
           log.error(s"Alas! can't analyze $s. Error: ${e.toString}")
           numSentenceFailures = numSentenceFailures + 1
         }
@@ -87,22 +87,21 @@ class DcsChapterWrapper(chapter: DcsChapter) {
 }
 
 class DcsSentenceWrapper(sentence: DcsSentence) {
-  //  <a href="index.php?contents=lemma&IDWord=32153"target="_blank">ambhodhi</a> [n.s.m.]&nbsp;&nbsp;
-  // <a href="index.php?contents=lemma&IDWord=102755"target="_blank">sthala</a> [comp.]-<a href="index.php?contents=lemma&IDWord=203679"target="_blank">tā</a> [ac.s.f.]&nbsp;&nbsp;
-  // <a href="index.php?contents=lemma&IDWord=102755"target="_blank">sthala</a> [n.s.n.]&nbsp;&nbsp;
-  // <a href="index.php?contents=lemma&IDWord=88119"target="_blank">jaladhi</a> [comp.]-<a href="index.php?contents=lemma&IDWord=203679"target="_blank">tā</a> [ac.s.f.]&nbsp;&nbsp;
-  // <a href="index.php?contents=lemma&IDWord=42911"target="_blank">dhūli</a> [g./o.s.m.]&nbsp;&nbsp;
-  // <a href="index.php?contents=lemma&IDWord=81126"target="_blank">lava</a> [n.s.n.]&nbsp;&nbsp;
-  // <a href="index.php?contents=lemma&IDWord=127714"target="_blank">śaila</a> [comp.]-<a href="index.php?contents=lemma&IDWord=203679"target="_blank">tā</a> [ac.s.f.]
+//  <a href="index.php?contents=lemma&IDWord=96104"target="_blank">tadā</a> [indecl.]-
+//    <a href="index.php?contents=lemma&IDWord=159581"target="_blank">majj</a> [3. sg. athem. s-Aor.]&nbsp;&nbsp;
+//  <a href="index.php?contents=lemma&IDWord=51708"target="_blank">cintā</a> [comp.]-
+//    <a href="index.php?contents=lemma&IDWord=104154"target="_blank">sarit</a> [l.s.f.]&nbsp;&nbsp;
+//  <a href="index.php?contents=lemma&IDWord=138107"target="_blank">virahin</a> [n.s.f.]
   def scrapeAnalysis() = {
     val doc = browser.post(s"http://kjc-sv013.kjc.uni-heidelberg.de/dcs/ajax-php/ajax-text-handler-wrapper.php",
       form = Map(
         "mode" -> "printonesentence",
         "sentenceid" -> sentence.dcsId.toString
       ))
-    val wordGroupHtmls = doc.toHtml.split("&nbsp;&nbsp;").map(_.split("-"))
+    val wordGroupHtmls = doc.toHtml.split("&nbsp;&nbsp;").map(_.split("(?=\\])-"))
     val analysis = wordGroupHtmls.map(wordGroupHtml => {
       wordGroupHtml.map(x => {
+        log debug(x)
         val y = browser.parseString(x) >> element("a")
         val grammarHint = new Regex("\\[(.+)\\]").findFirstIn(x)
         val word = new DcsWord(root = y.text,
@@ -120,9 +119,11 @@ class DcsSentenceWrapper(sentence: DcsSentence) {
 
 object dcsScraper {
   implicit def dcsBookWrap(s: DcsBook) = new DcsBookWrapper(s)
+  implicit def dcsSentenceWrap(s: DcsSentence) = new DcsSentenceWrapper(s)
 
   val log = LoggerFactory.getLogger(getClass.getName)
   val browser = JsoupBrowser()
+  val dcsDb = new DcsCouchbaseLiteDB
 
 
   def scrapeBookList: Seq[DcsBook] = {
@@ -132,9 +133,8 @@ object dcsScraper {
     return books
   }
 
-  def main(args: Array[String]): Unit = {
+  def scrapeAll() = {
     var books = scrapeBookList
-    val dcsDb = new DcsCouchbaseLiteDB
     dcsDb.openDatabasesLaptop()
     dcsDb.replicateAll()
     var bookFailureMap = mutable.HashMap[String, Int]()
@@ -148,5 +148,19 @@ object dcsScraper {
     })
     log.error(s"Failures: ${bookFailureMap.mkString("\n")}")
     dcsDb.closeDatabases
+  }
+
+  def fillSentenceAnalyses() = {
+    dcsDb.openDatabasesLaptop(readOnly = true)
+    dcsDb.getSentencesWithoutAnalysis().take(100).foreach(sentence => {
+      log debug s"before: $sentence"
+      sentence.scrapeAnalysis()
+      log debug s"after: $sentence"
+    })
+    dcsDb.closeDatabases
+  }
+
+  def main(args: Array[String]): Unit = {
+    fillSentenceAnalyses()
   }
 }

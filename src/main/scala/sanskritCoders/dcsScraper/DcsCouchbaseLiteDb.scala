@@ -2,6 +2,7 @@ package sanskritCoders.dcsScraper
 
 import _root_.java.io.File
 
+import com.couchbase.lite.ManagerOptions
 import dbSchema.dcs.{DcsBook, DcsSentence}
 import dbUtils.jsonHelper
 import sanskrit_coders.db.couchbaseLite.CouchbaseLiteDb
@@ -19,13 +20,15 @@ class DcsCouchbaseLiteDB() {
   var sentencesDb: Database = null
   var dbManager: Manager = null
 
-  def openDatabasesLaptop() = {
+  def openDatabasesLaptop(readOnly: Boolean = false) = {
+    val managerOptions = Manager.DEFAULT_OPTIONS
+    managerOptions.setReadOnly(readOnly)
     dbManager = new Manager(new JavaContext("data") {
       override def getRootDirectory: File = {
         val rootDirectoryPath = "/home/vvasuki/dcs-scraper"
         new File(rootDirectoryPath)
       }
-    }, Manager.DEFAULT_OPTIONS)
+    }, managerOptions )
     dbManager.setStorageType("ForestDB")
     booksDb = dbManager.getDatabase("dcs_books")
     sentencesDb = dbManager.getDatabase("dcs_sentences")
@@ -66,5 +69,10 @@ class DcsCouchbaseLiteDB() {
     sentencesDb.updateDocument(dcsSentence.getKey, jsonMap)
     return true
   }
-}
 
+  def getSentencesWithoutAnalysis(): Iterator[DcsSentence] = {
+    val query = sentencesDb.createAllDocumentsQuery()
+    return sentencesDb.listCaseClassObjects(query=query, explicitJsonClass=DcsSentence.getClass).map(_.asInstanceOf[DcsSentence])
+      .filter(_.dcsAnalysisDecomposition == None)
+  }
+}
