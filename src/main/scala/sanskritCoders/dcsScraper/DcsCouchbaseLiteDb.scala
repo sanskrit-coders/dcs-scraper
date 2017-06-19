@@ -3,7 +3,7 @@ package sanskritCoders.dcsScraper
 import _root_.java.io.File
 
 import com.couchbase.lite.ManagerOptions
-import dbSchema.dcs.{DcsBook, DcsSentence}
+import dbSchema.dcs.{DcsBook, DcsObject, DcsSentence, DcsOldBook}
 import dbUtils.jsonHelper
 import sanskrit_coders.db.couchbaseLite.CouchbaseLiteDb
 
@@ -50,7 +50,7 @@ class DcsCouchbaseLiteDB() {
     sentencesDb.purgeDatabase()
   }
 
-  def updateBooksDb(dcsBook: DcsBook): Boolean = {
+  def updateBooksDb(dcsBook: DcsObject): Boolean = {
     val jsonMap = jsonHelper.getJsonMap(dcsBook)
     if (dcsBook.dcsId % 50 == 0) {
       log debug (jsonMap.toString())
@@ -74,5 +74,11 @@ class DcsCouchbaseLiteDB() {
     val query = sentencesDb.createAllDocumentsQuery()
     return sentencesDb.listCaseClassObjects(query=query, explicitJsonClass=DcsSentence.getClass).map(_.asInstanceOf[DcsSentence])
       .filter(_.dcsAnalysisDecomposition == None)
+  }
+
+  def getOldBooks(): Iterator[DcsOldBook] = {
+    val query = booksDb.createAllDocumentsQuery()
+    // TODO: Fix the below.
+    return booksDb.listCaseClassObjects(query=query, explicitJsonClass=DcsOldBook.getClass).map(_.asInstanceOf[DcsOldBook])
   }
 }

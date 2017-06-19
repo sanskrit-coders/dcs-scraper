@@ -21,25 +21,31 @@ class DcsBookWrapper(book: DcsBook) {
         "textid" -> book.dcsId.toString
       ))
     val chapterTags = doc >> elementList("option")
-    val chapters = chapterTags.map(tag => new DcsChapter(dcsId = tag.attr("value").toInt, dcsName = Some(tag.text)))
-    book.chapters = Some(chapters)
+    val chapterIds = chapterTags.map(tag => tag.attr("value").toInt)
+    book.chapterIds = Some(chapterIds)
   }
 
-  def storeBook(dcsDb: DcsCouchbaseLiteDB, chaptersToStartFrom: String = null, updateDcsBook: Boolean = false): Int = {
-    var numSentenceFailures = 0
-    require(!(chaptersToStartFrom != null && updateDcsBook == true))
+  def storeBook(dcsDb: DcsCouchbaseLiteDB) = {
     log.info(s"Starting on book ${book.title}")
     scrapeChapterList()
-    val chapters = book.chapters.get.dropWhile(x => chaptersToStartFrom != null && !x.dcsName.contains(chaptersToStartFrom))
-    chapters.foreach(chapter => {
-      numSentenceFailures += chapter.storeSentences(dcsDb)
-      log.info(s"Processing book ${book.title} - chapter ${chapter.dcsName}")
-      if (updateDcsBook) {
-        chapter.scrapeChapter()
-        log.info(s"Fetched book ${book.title}")
-        dcsDb.updateBooksDb(book)
-      }
-    })
+    log.info(s"Fetched book ${book.title}")
+    dcsDb.updateBooksDb(book)
+  }
+
+  def storeChapters(dcsDb: DcsCouchbaseLiteDB, chaptersToStartFrom: String = null, updateChapterNotSentences: Boolean = false): Int = {
+    var numSentenceFailures = 0
+    require(!(chaptersToStartFrom != null && updateChapterNotSentences == true))
+    var chapters = book.chapterIds.get.map(x => new DcsChapter(dcsId = x))
+    chapters = chapters.dropWhile(x => chaptersToStartFrom != null && !x.dcsName.contains(chaptersToStartFrom))
+    if (updateChapterNotSentences) {
+      chapters.foreach(_.storeChapter(dcsDb))
+    } else {
+      chapters.foreach(chapter => {
+        numSentenceFailures += chapter.storeSentences(dcsDb)
+        log.info(s"Processing book ${book.title} - chapter ${chapter.dcsName}")
+        chapter
+      })
+    }
     return numSentenceFailures
   }
 }
@@ -56,6 +62,11 @@ class DcsChapterWrapper(chapter: DcsChapter) {
     val sentenceTags = doc >> elementList(".sentence_div")
     val sentenceIds = sentenceTags.map(tag => tag.attr("sentence_id").toInt)
     chapter.sentenceIds = Some(sentenceIds)
+  }
+
+  def storeChapter(dcsDb: DcsCouchbaseLiteDB) = {
+    scrapeChapter()
+    dcsDb.updateBooksDb(chapter)
   }
 
   def scrapeSentences(): Seq[DcsSentence] = {
@@ -145,12 +156,12 @@ object dcsScraper {
     var books = scrapeBookList
     var bookFailureMap = mutable.HashMap[String, Int]()
 
-    val incompleteBookTitle = "Mahābhārata"
+    val incompleteBookTitle = "Pañcaviṃśabrāhmaṇa"
     val incompleteBook = books.filter(_.title.startsWith(incompleteBookTitle)).head
-    bookFailureMap += Tuple2(incompleteBook.title, (incompleteBook.storeBook(dcsDb = dcsDb, chaptersToStartFrom = "MBh, 12, 22")))
+    bookFailureMap += Tuple2(incompleteBook.title, (incompleteBook.storeChapters(dcsDb = dcsDb)))
 
     books.dropWhile(!_.title.startsWith(incompleteBookTitle)).drop(1).foreach(book => {
-      bookFailureMap += Tuple2(book.title, (book.storeBook(dcsDb = dcsDb)))
+      bookFailureMap += Tuple2(book.title, (book.storeChapters(dcsDb = dcsDb)))
     })
     log.error(s"Failures: ${bookFailureMap.mkString("\n")}")
     dcsDb.closeDatabases
@@ -172,9 +183,15 @@ object dcsScraper {
 
   def main(args: Array[String]): Unit = {
     dcsDb.openDatabasesLaptop()
-    dcsDb.replicateAll()
+//    dcsDb.replicateAll()
 //    fillSentenceAnalyses()
-    scrapeAll()
+//    scrapeAll()
+    dcsDb.getOldBooks().foreach(book => {
+      book.chapters.get.foreach(chapter => {
+        dcsDb.updateBooksDb(chapter)
+      })
+      val newBook = DcsBook(dcsId = book.dcsId, title = book.title, chapterIds = Some(book.chapters.get.map(_.dcsId)))
+    })
     dcsDb.closeDatabases
   }
 }
