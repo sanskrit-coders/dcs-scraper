@@ -25,14 +25,15 @@ class DcsBookWrapper(book: DcsBook) {
     book.chapters = Some(chapters)
   }
 
-  def storeBook(dcsDb: DcsCouchbaseLiteDB, chaptersToSkip: Int = 0, updateDcsBook: Boolean = false): Int = {
+  def storeBook(dcsDb: DcsCouchbaseLiteDB, chaptersToStartFrom: String = null, updateDcsBook: Boolean = false): Int = {
     var numSentenceFailures = 0
-    require(!(chaptersToSkip > 0 && updateDcsBook == true))
+    require(!(chaptersToStartFrom != null && updateDcsBook == true))
     log.info(s"Starting on book ${book.title}")
     scrapeChapterList()
-    book.chapters.get.drop(chaptersToSkip).foreach(chapter => {
+    val chapters = book.chapters.get.dropWhile(x => chaptersToStartFrom != null && !x.dcsName.contains(chaptersToStartFrom))
+    chapters.foreach(chapter => {
       numSentenceFailures += chapter.storeSentences(dcsDb)
-      log.info(s"Processing book ${book.title} - ${chapter.dcsName}")
+      log.info(s"Processing book ${book.title} - chapter ${chapter.dcsName}")
       if (updateDcsBook) {
         chapter.scrapeChapter()
         log.info(s"Fetched book ${book.title}")
@@ -73,7 +74,9 @@ class DcsChapterWrapper(chapter: DcsChapter) {
     val sentences = scrapeSentences()
     sentences.foreach(s => {
       try {
-        s.scrapeAnalysis()
+        if (!s.scrapeAnalysis()) {
+          numSentenceFailures += 1
+        }
       } catch {
         case e: NoSuchElementException => {
           log.error(s"Alas! can't analyze $s. Error: ${e.toString}")
@@ -87,21 +90,24 @@ class DcsChapterWrapper(chapter: DcsChapter) {
 }
 
 class DcsSentenceWrapper(sentence: DcsSentence) {
-//  <a href="index.php?contents=lemma&IDWord=96104"target="_blank">tadā</a> [indecl.]-
-//    <a href="index.php?contents=lemma&IDWord=159581"target="_blank">majj</a> [3. sg. athem. s-Aor.]&nbsp;&nbsp;
-//  <a href="index.php?contents=lemma&IDWord=51708"target="_blank">cintā</a> [comp.]-
-//    <a href="index.php?contents=lemma&IDWord=104154"target="_blank">sarit</a> [l.s.f.]&nbsp;&nbsp;
-//  <a href="index.php?contents=lemma&IDWord=138107"target="_blank">virahin</a> [n.s.f.]
-  def scrapeAnalysis() = {
+  //  <a href="index.php?contents=lemma&IDWord=96104"target="_blank">tadā</a> [indecl.]-
+  //    <a href="index.php?contents=lemma&IDWord=159581"target="_blank">majj</a> [3. sg. athem. s-Aor.]&nbsp;&nbsp;
+  //  <a href="index.php?contents=lemma&IDWord=51708"target="_blank">cintā</a> [comp.]-
+  //    <a href="index.php?contents=lemma&IDWord=104154"target="_blank">sarit</a> [l.s.f.]&nbsp;&nbsp;
+  //  <a href="index.php?contents=lemma&IDWord=138107"target="_blank">virahin</a> [n.s.f.]
+  def scrapeAnalysis(): Boolean = {
     val doc = browser.post(s"http://kjc-sv013.kjc.uni-heidelberg.de/dcs/ajax-php/ajax-text-handler-wrapper.php",
       form = Map(
         "mode" -> "printonesentence",
         "sentenceid" -> sentence.dcsId.toString
       ))
+    if (doc.toHtml.contains("no analysis for this sentence")) {
+      return false
+    }
     val wordGroupHtmls = doc.toHtml.split("&nbsp;&nbsp;").map(_.split("(?=\\])-"))
     val analysis = wordGroupHtmls.map(wordGroupHtml => {
       wordGroupHtml.map(x => {
-        log debug(x)
+//        log debug (x)
         val y = browser.parseString(x) >> element("a")
         val grammarHint = new Regex("\\[(.+)\\]").findFirstIn(x)
         val word = new DcsWord(root = y.text,
@@ -113,12 +119,14 @@ class DcsSentenceWrapper(sentence: DcsSentence) {
     sentence.dcsAnalysisDecomposition = Some(analysis)
     //    sentence.dcsAnalysis = Some(doc.toString)
     //    log.debug(sentence.toString)
+    return true
   }
 
 }
 
 object dcsScraper {
   implicit def dcsBookWrap(s: DcsBook) = new DcsBookWrapper(s)
+
   implicit def dcsSentenceWrap(s: DcsSentence) = new DcsSentenceWrapper(s)
 
   val log = LoggerFactory.getLogger(getClass.getName)
@@ -135,13 +143,11 @@ object dcsScraper {
 
   def scrapeAll() = {
     var books = scrapeBookList
-    dcsDb.openDatabasesLaptop()
-    dcsDb.replicateAll()
     var bookFailureMap = mutable.HashMap[String, Int]()
 
     val incompleteBookTitle = "Mahābhārata"
     val incompleteBook = books.filter(_.title.startsWith(incompleteBookTitle)).head
-    bookFailureMap += Tuple2(incompleteBook.title, (incompleteBook.storeBook(dcsDb = dcsDb, chaptersToSkip = 161)))
+    bookFailureMap += Tuple2(incompleteBook.title, (incompleteBook.storeBook(dcsDb = dcsDb, chaptersToStartFrom = "MBh, 12, 22")))
 
     books.dropWhile(!_.title.startsWith(incompleteBookTitle)).drop(1).foreach(book => {
       bookFailureMap += Tuple2(book.title, (book.storeBook(dcsDb = dcsDb)))
@@ -151,16 +157,24 @@ object dcsScraper {
   }
 
   def fillSentenceAnalyses() = {
-    dcsDb.openDatabasesLaptop(readOnly = true)
-    dcsDb.getSentencesWithoutAnalysis().take(100).foreach(sentence => {
-      log debug s"before: $sentence"
-      sentence.scrapeAnalysis()
-      log debug s"after: $sentence"
+    dcsDb.openDatabasesLaptop()
+    var numNoAnalysis = 0
+    dcsDb.getSentencesWithoutAnalysis().foreach(sentence => {
+      //      log debug s"before: $sentence"
+      if (!sentence.scrapeAnalysis()) {
+        numNoAnalysis += 1
+      }
+      dcsDb.updateSentenceDb(sentence)
+      //      log debug s"after: $sentence"
     })
-    dcsDb.closeDatabases
+    log info s"No analysis for $numNoAnalysis sentences"
   }
 
   def main(args: Array[String]): Unit = {
-    fillSentenceAnalyses()
+    dcsDb.openDatabasesLaptop()
+    dcsDb.replicateAll()
+//    fillSentenceAnalyses()
+    scrapeAll()
+    dcsDb.closeDatabases
   }
 }
