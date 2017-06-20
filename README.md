@@ -28,6 +28,7 @@ This builds on the foundational work by the DCS team headed by Oliver. See [LICE
 # Resultant Database
 ## API-s
 * Get analysis for a sentence: [api](http://vvasuki.hopto.org:5984/dcs_sentences/sentence_354341), with [this](https://pastebin.com/d3td7qge) output.
+* Look up the sentences where a word appears: [api](http://vvasuki.hopto.org:5984/dcs_sentences/_design/index_words/_view/index_words?limit=100&reduce=false&keys=%5B%22hari%22%5D).
 * Get chapters and sentences in a book: [api](http://vvasuki.hopto.org:5984/dcs_books/book_1) with [this](https://pastebin.com/NwdiFKCD) result.
 
 ## Dump files

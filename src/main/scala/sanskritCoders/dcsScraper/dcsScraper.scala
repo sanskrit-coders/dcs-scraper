@@ -13,6 +13,7 @@ import scala.util.matching.Regex
 
 class DcsBookWrapper(book: DcsBook) {
   implicit def dcsChapterWrap(s: DcsChapter) = new DcsChapterWrapper(s)
+  var chapterNames : Seq[String] = null
 
   def scrapeChapterList() = {
     val doc = browser.post(s"http://kjc-sv013.kjc.uni-heidelberg.de/dcs/ajax-php/ajax-text-handler-wrapper.php",
@@ -23,26 +24,36 @@ class DcsBookWrapper(book: DcsBook) {
     val chapterTags = doc >> elementList("option")
     val chapterIds = chapterTags.map(tag => tag.attr("value").toInt)
     book.chapterIds = Some(chapterIds)
+    log info s"Added ${chapterIds.length} chapters."
+    chapterNames = chapterTags.map(tag => tag.text)
   }
 
   def storeBook(dcsDb: DcsCouchbaseLiteDB) = {
     log.info(s"Starting on book ${book.title}")
-    scrapeChapterList()
+    if (book.chapterIds == None ) {
+      scrapeChapterList()
+    }
     log.info(s"Fetched book ${book.title}")
     dcsDb.updateBooksDb(book)
   }
 
   def storeChapters(dcsDb: DcsCouchbaseLiteDB, chaptersToStartFrom: String = null, updateChapterNotSentences: Boolean = false): Int = {
     var numSentenceFailures = 0
+    if (book.chapterIds == None ) {
+      scrapeChapterList()
+    }
+    log.info(s"Starting on book ${book.title}")
     require(!(chaptersToStartFrom != null && updateChapterNotSentences == true))
-    var chapters = book.chapterIds.get.map(x => new DcsChapter(dcsId = x))
+    var chapters = book.chapterIds.get.zip(chapterNames).map(x => new DcsChapter(dcsId = x._1, dcsName = Some(x._2)))
+    chapters.foreach(_.scrapeChapter())
+//    log.info(chapters.map(x => s"${x.dcsId} ${x.dcsName}").mkString("\n"))
     chapters = chapters.dropWhile(x => chaptersToStartFrom != null && !x.dcsName.contains(chaptersToStartFrom))
     if (updateChapterNotSentences) {
       chapters.foreach(_.storeChapter(dcsDb))
     } else {
       chapters.foreach(chapter => {
+        log.info(s"Processing chapter ${chapter.dcsName}")
         numSentenceFailures += chapter.storeSentences(dcsDb)
-        log.info(s"Processing book ${book.title} - chapter ${chapter.dcsName}")
         chapter
       })
     }
@@ -65,7 +76,9 @@ class DcsChapterWrapper(chapter: DcsChapter) {
   }
 
   def storeChapter(dcsDb: DcsCouchbaseLiteDB) = {
-    scrapeChapter()
+    if (chapter.sentenceIds == None) {
+      scrapeChapter()
+    }
     dcsDb.updateBooksDb(chapter)
   }
 
@@ -82,6 +95,10 @@ class DcsChapterWrapper(chapter: DcsChapter) {
 
   def storeSentences(dcsDb: DcsCouchbaseLiteDB): Int = {
     var numSentenceFailures = 0
+    log.info(s"Processing chapter ${chapter.dcsName}")
+    if (chapter.sentenceIds == None) {
+      scrapeChapter()
+    }
     val sentences = scrapeSentences()
     sentences.foreach(s => {
       try {
@@ -156,9 +173,9 @@ object dcsScraper {
     var books = scrapeBookList
     var bookFailureMap = mutable.HashMap[String, Int]()
 
-    val incompleteBookTitle = "Pañcaviṃśabrāhmaṇa"
+    val incompleteBookTitle = "Rāmāyaṇa"
     val incompleteBook = books.filter(_.title.startsWith(incompleteBookTitle)).head
-    bookFailureMap += Tuple2(incompleteBook.title, (incompleteBook.storeChapters(dcsDb = dcsDb)))
+    bookFailureMap += Tuple2(incompleteBook.title, (incompleteBook.storeChapters(dcsDb = dcsDb, chaptersToStartFrom = "Rām, 3, 70")))
 
     books.dropWhile(!_.title.startsWith(incompleteBookTitle)).drop(1).foreach(book => {
       bookFailureMap += Tuple2(book.title, (book.storeChapters(dcsDb = dcsDb)))
@@ -168,7 +185,6 @@ object dcsScraper {
   }
 
   def fillSentenceAnalyses() = {
-    dcsDb.openDatabasesLaptop()
     var numNoAnalysis = 0
     dcsDb.getSentencesWithoutAnalysis().foreach(sentence => {
       //      log debug s"before: $sentence"
@@ -184,7 +200,6 @@ object dcsScraper {
   def main(args: Array[String]): Unit = {
     dcsDb.openDatabasesLaptop()
     dcsDb.replicateAll()
-    fillSentenceAnalyses()
     scrapeAll()
     dcsDb.closeDatabases
   }
