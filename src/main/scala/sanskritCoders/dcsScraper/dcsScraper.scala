@@ -183,15 +183,9 @@ object dcsScraper {
 
   def main(args: Array[String]): Unit = {
     dcsDb.openDatabasesLaptop()
-//    dcsDb.replicateAll()
-//    fillSentenceAnalyses()
-//    scrapeAll()
-    dcsDb.getOldBooks().foreach(book => {
-      book.chapters.get.foreach(chapter => {
-        dcsDb.updateBooksDb(chapter)
-      })
-      val newBook = DcsBook(dcsId = book.dcsId, title = book.title, chapterIds = Some(book.chapters.get.map(_.dcsId)))
-    })
+    dcsDb.replicateAll()
+    fillSentenceAnalyses()
+    scrapeAll()
     dcsDb.closeDatabases
   }
 }

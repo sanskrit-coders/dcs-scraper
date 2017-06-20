@@ -2,8 +2,8 @@ package sanskritCoders.dcsScraper
 
 import _root_.java.io.File
 
-import com.couchbase.lite.ManagerOptions
-import dbSchema.dcs.{DcsBook, DcsObject, DcsSentence, DcsOldBook}
+import com.couchbase.lite.{ManagerOptions, Predicate, QueryRow}
+import dbSchema.dcs.{DcsBook, DcsObject, DcsOldBook, DcsSentence}
 import dbUtils.jsonHelper
 import sanskrit_coders.db.couchbaseLite.CouchbaseLiteDb
 
@@ -76,9 +76,14 @@ class DcsCouchbaseLiteDB() {
       .filter(_.dcsAnalysisDecomposition == None)
   }
 
+  // TODO: Fix the below.
   def getOldBooks(): Iterator[DcsOldBook] = {
     val query = booksDb.createAllDocumentsQuery()
-    // TODO: Fix the below.
+    query.setPostFilter(new Predicate[QueryRow] {
+      override def apply(row: QueryRow): Boolean = {
+        !row.getDocumentProperties.containsKey(jsonHelper.JSON_CLASS_FIELD_NAME)
+      }
+    })
     return booksDb.listCaseClassObjects(query=query, explicitJsonClass=DcsOldBook.getClass).map(_.asInstanceOf[DcsOldBook])
   }
 }
