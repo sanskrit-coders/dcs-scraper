@@ -35,9 +35,11 @@ This builds on the foundational work by the DCS team headed by Oliver. See [LICE
 
 
 ## Dump files
-* As a couchbase lite database here.
+* As a couchbase lite database [here](https://archive.org/details/dcs-data.tar).
 
 # Databse Deployment
+* Periodic update announcements [here](groups.google.com/forum/#!forum/sanskrit-programmers).
+
 ## Database replicas
 * You want to host a repilica and make things faster for folks in your geographical area? Just open an issue in this project and let us know.
 * Ahmedabad, IN <http://vedavaapi.org:5984/dcs_sentences/_all_docs>

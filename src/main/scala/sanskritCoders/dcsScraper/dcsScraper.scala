@@ -52,7 +52,7 @@ class DcsBookWrapper(book: DcsBook) {
       chapters.foreach(_.storeChapter(dcsDb))
     } else {
       chapters.foreach(chapter => {
-        log.info(s"Processing chapter ${chapter.dcsName}")
+        log.info(s"Processing chapter ${chapter.dcsName} of ${book.title}")
         numSentenceFailures += chapter.storeSentences(dcsDb)
         chapter
       })
@@ -173,9 +173,9 @@ object dcsScraper {
     var books = scrapeBookList
     var bookFailureMap = mutable.HashMap[String, Int]()
 
-    val incompleteBookTitle = "Rāmāyaṇa"
+    val incompleteBookTitle = "Ānandakanda"
     val incompleteBook = books.filter(_.title.startsWith(incompleteBookTitle)).head
-    bookFailureMap += Tuple2(incompleteBook.title, (incompleteBook.storeChapters(dcsDb = dcsDb, chaptersToStartFrom = "Rām, 3, 70")))
+    bookFailureMap += Tuple2(incompleteBook.title, (incompleteBook.storeChapters(dcsDb = dcsDb, chaptersToStartFrom = "ĀK, 1, 17")))
 
     books.dropWhile(!_.title.startsWith(incompleteBookTitle)).drop(1).foreach(book => {
       bookFailureMap += Tuple2(book.title, (book.storeChapters(dcsDb = dcsDb)))
