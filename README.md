@@ -28,7 +28,7 @@ This builds on the foundational work by the DCS team headed by Oliver. See [LICE
 # Resultant Database
 ## API-s
 * Get analysis for a sentence: [api](http://vedavaapi.org:5984/dcs_sentences/sentence_354341), with [this](https://pastebin.com/d3td7qge) output.
-* Get chapter with a certain sentenceId: [api](http://vedavaapi:5984/dcs_books/_design/sentence_index/_view/sentence_index?limit=100&reduce=false&include_docs=true&keys=%5B1%5D).
+* Get chapter with a certain sentenceId: [api](http://vedavaapi.org:5984/dcs_books/_design/sentence_index/_view/sentence_index?limit=20&reduce=false&include_docs=true&keys=%5B1%5D).
 * Look up the sentences where a word appears: [api](http://vedavaapi.org:5984/dcs_sentences/_design/index_words/_view/index_words?limit=100&reduce=false&keys=%5B%22hari%22%5D).
 * Get book with a certain chapterId: [api](http://vedavaapi.org:5984/dcs_books/_design/chapter_index/_view/chapter_index?limit=100&reduce=false&include_docs=true&keys=%5B59%5D).
 * Lookup book by name: [api](http://vedavaapi.org:5984/dcs_books/_design/book_index/_view/book_index?limit=100&reduce=false&include_docs=true&keys=%5B%22Abhidh%C4%81nacint%C4%81ma%E1%B9%87i%22%5D).
