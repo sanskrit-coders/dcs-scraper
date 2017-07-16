@@ -2,8 +2,8 @@ package sanskritCoders.dcsScraper
 
 import _root_.java.io.File
 
-import com.couchbase.lite.{ManagerOptions, Predicate, QueryRow}
-import dbSchema.dcs.{DcsBook, DcsObject, DcsOldBook, DcsSentence}
+import com.couchbase.lite.{Predicate, QueryRow}
+import dbSchema.dcs.{DcsBook, DcsObject, DcsSentence}
 import dbUtils.jsonHelper
 import sanskrit_coders.db.couchbaseLite.CouchbaseLiteDb
 
@@ -34,9 +34,9 @@ class DcsCouchbaseLiteDB() {
     sentencesDb = dbManager.getDatabase("dcs_sentences")
   }
 
-  def replicateAll() = {
-    booksDb.replicate()
-    sentencesDb.replicate()
+  def replicateAll(doPull: Boolean = false) = {
+    booksDb.replicate(doPull = doPull)
+    sentencesDb.replicate(doPull = doPull)
   }
 
 
@@ -76,14 +76,18 @@ class DcsCouchbaseLiteDB() {
       .filter(_.dcsAnalysisDecomposition == None)
   }
 
-  // TODO: Fix the below.
-  def getOldBooks(): Iterator[DcsOldBook] = {
-    val query = booksDb.createAllDocumentsQuery()
-    query.setPostFilter(new Predicate[QueryRow] {
-      override def apply(row: QueryRow): Boolean = {
-        !row.getDocumentProperties.containsKey(jsonHelper.JSON_CLASS_FIELD_NAME)
-      }
-    })
-    return booksDb.listCaseClassObjects(query=query, explicitJsonClass=DcsOldBook.getClass).map(_.asInstanceOf[DcsOldBook])
+  def getBook(title: String) : DcsBook = {
+    import scala.collection.JavaConverters._
+    //    The index below was created in couchdb and later not synced into couchbase lite files (though I tried).
+    val query = booksDb.getExistingView("book_index").createQuery()
+    log.debug(booksDb.getExistingView("chapter_index").getTotalRows.toString)
+    query.setKeys(List(title.asInstanceOf[AnyRef]).asJava)
+    log.debug(query.getKeys.toString)
+    val results = booksDb.listCaseClassObjects(query = query)
+    if (results.hasNext) {
+      return results.next().asInstanceOf[DcsBook]
+    } else {
+      return null
+    }
   }
 }

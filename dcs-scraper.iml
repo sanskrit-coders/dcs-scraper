@@ -14,7 +14,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Maven: org.scala-lang:scala-library:2.11.8" level="project" />
     <orderEntry type="library" name="Maven: org.scala-lang:scala-xml:2.11.0-M4" level="project" />
-    <orderEntry type="module" module-name="indic-transliteration" />
+    <orderEntry type="library" name="Maven: com.github.sanskrit-coders:indic-transliteration:1.1" level="project" />
     <orderEntry type="module" module-name="couchbase-lite-desktop" />
     <orderEntry type="library" name="Maven: com.couchbase.lite:couchbase-lite-java:1.4.0" level="project" />
     <orderEntry type="library" name="Maven: com.couchbase.lite:couchbase-lite-java-core:1.4.0" level="project" />
