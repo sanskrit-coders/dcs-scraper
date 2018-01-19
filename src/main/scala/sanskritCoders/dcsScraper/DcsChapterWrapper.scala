@@ -5,6 +5,7 @@ import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
 import sanskritCoders.dcsScraper.dcsScraper.{browser, log}
 import sanskrit_coders.db.couchbaseLite.DcsCouchbaseLiteDB
 import net.ruippeixotog.scalascraper.dsl.DSL._
+import sanskrit_coders.dcs.DcsDb
 
 class DcsChapterWrapper(chapter: DcsChapter) {
   implicit def dcsSentenceWrap(s: DcsSentence) = new DcsSentenceWrapper(s)
@@ -20,11 +21,12 @@ class DcsChapterWrapper(chapter: DcsChapter) {
     chapter.sentenceIds = Some(sentenceIds)
   }
 
-  def storeChapter(dcsDb: DcsCouchbaseLiteDB): Boolean = {
-    if (chapter.sentenceIds == None) {
+  def storeChapter(dcsDb: Either[DcsCouchbaseLiteDB, DcsDb]): Boolean = {
+    if (chapter.sentenceIds.isEmpty) {
       scrapeChapter()
     }
-    dcsDb.updateBooksDb(chapter)
+    dcsDb.foreach(_.updateBooksDb(chapter))
+    return true
   }
 
   def scrapeSentences(): Seq[DcsSentence] = {
@@ -38,10 +40,10 @@ class DcsChapterWrapper(chapter: DcsChapter) {
     return sentences
   }
 
-  def storeSentences(dcsDb: DcsCouchbaseLiteDB): Int = {
+  def storeSentences(dcsDb: Either[DcsCouchbaseLiteDB, DcsDb]): Int = {
     var numSentenceFailures = 0
     log.info(s"Processing chapter ${chapter.dcsName}")
-    if (chapter.sentenceIds == None) {
+    if (chapter.sentenceIds.isEmpty) {
       scrapeChapter()
     }
     val sentences = scrapeSentences()
@@ -56,7 +58,7 @@ class DcsChapterWrapper(chapter: DcsChapter) {
           numSentenceFailures = numSentenceFailures + 1
         }
       }
-      dcsDb.updateSentenceDb(s)
+      dcsDb.foreach(_.updateSentenceDb(s))
     })
     return numSentenceFailures
   }

@@ -5,6 +5,7 @@ import dbSchema.dcs.{DcsBook, DcsChapter}
 import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
 import sanskritCoders.dcsScraper.dcsScraper.{browser, log}
 import sanskrit_coders.db.couchbaseLite.DcsCouchbaseLiteDB
+import sanskrit_coders.dcs.DcsDb
 
 class DcsBookWrapper(book: DcsBook) {
   implicit def dcsChapterWrap(s: DcsChapter): DcsChapterWrapper = new DcsChapterWrapper(s)
@@ -25,24 +26,24 @@ class DcsBookWrapper(book: DcsBook) {
 
   def storeBook(dcsDb: DcsCouchbaseLiteDB) = {
     log.info(s"Starting on book ${book.title}")
-    if (book.chapterIds == None ) {
+    if (book.chapterIds.isEmpty ) {
       scrapeChapterList()
     }
     log.info(s"Fetched book ${book.title}")
     dcsDb.updateBooksDb(book)
   }
 
-  def storeChapters(dcsDb: DcsCouchbaseLiteDB, chaptersToStartFrom: String = null, updateChapterNotSentences: Boolean = false): Int = {
+  def storeChapters(dcsDb: Either[DcsCouchbaseLiteDB, DcsDb], chaptersToStartFrom: Option[String] = None, updateChapterNotSentences: Boolean = false): Int = {
     var numSentenceFailures = 0
-    if (book.chapterIds == None ) {
+    if (book.chapterIds.isEmpty ) {
       scrapeChapterList()
     }
     log.info(s"Starting on book ${book.title}")
-    require(!(chaptersToStartFrom != null && updateChapterNotSentences == true))
+    require(!(chaptersToStartFrom.isDefined && updateChapterNotSentences == true))
     var chapters = book.chapterIds.get.zip(chapterNames).map(x => new DcsChapter(dcsId = x._1, dcsName = Some(x._2)))
     chapters.foreach(_.scrapeChapter())
 //    log.info(chapters.map(x => s"${x.dcsId} ${x.dcsName}").mkString("\n"))
-    chapters = chapters.dropWhile(x => chaptersToStartFrom != null && !x.dcsName.contains(chaptersToStartFrom))
+    chapters = chapters.dropWhile(x => chaptersToStartFrom.isDefined && !x.dcsName.contains(chaptersToStartFrom.get))
     if (updateChapterNotSentences) {
       chapters.foreach(_.storeChapter(dcsDb))
     } else {

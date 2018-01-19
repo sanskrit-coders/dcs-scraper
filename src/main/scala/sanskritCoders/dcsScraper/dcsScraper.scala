@@ -34,16 +34,16 @@ object dcsScraper {
     books
   }
 
-  def scrapeAll(): Unit = {
+  def scrapeAll(incompleteBookTitle: Option[String] = None, chapterToStartFrom: Option[String] = None): Unit = {
     var books = scrapeBookList
     var bookFailureMap = mutable.HashMap[String, Int]()
-
-    val incompleteBookTitle = "Ānandakanda"
-    val incompleteBook = books.filter(_.title.startsWith(incompleteBookTitle)).head
-    bookFailureMap += Tuple2(incompleteBook.title, incompleteBook.storeChapters(dcsDb = dcsDb, chaptersToStartFrom = "ĀK, 1, 17"))
-
-    books.dropWhile(!_.title.startsWith(incompleteBookTitle)).drop(1).foreach(book => {
-      bookFailureMap += Tuple2(book.title, book.storeChapters(dcsDb = dcsDb))
+    if (incompleteBookTitle.isDefined) {
+      val incompleteBook = books.filter(_.title.startsWith(incompleteBookTitle.get)).head
+      bookFailureMap += Tuple2(incompleteBook.title, incompleteBook.storeChapters(dcsDb = Left(dcsDb), chaptersToStartFrom = chapterToStartFrom))
+      books = books.dropWhile(!_.title.startsWith(incompleteBookTitle.get)).drop(1)
+    }
+    books.foreach(book => {
+      bookFailureMap += Tuple2(book.title, book.storeChapters(dcsDb = Left(dcsDb)))
     })
     log.error(s"Failures: ${bookFailureMap.mkString("\n")}")
   }
