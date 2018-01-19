@@ -7,6 +7,7 @@ import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
 import org.slf4j.LoggerFactory
 import sanskritCoders.dcsScraper.dcsScraper.{browser, log}
+import sanskrit_coders.db.couchbaseLite.DcsCouchbaseLiteDB
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -132,18 +133,17 @@ class DcsSentenceWrapper(sentence: DcsSentence) {
     if (doc.toHtml.contains("no analysis for this sentence")) {
       return false
     }
-    val wordGroupHtmls = doc.toHtml.split("&nbsp;&nbsp;").map(_.split("(?=\\])-"))
+//    log.debug(doc.toHtml)
+//    log.debug(doc.toHtml.split("&nbsp;&nbsp;").mkString("|||"))
+    val wordGroupHtmls = doc.toHtml.split("&nbsp;&nbsp;")
+    val wordAnalysisRegex = """<a href=".+?IDWord=(\d+?)".+?>(.+?)</a> \[(.+?)\]""".r
     val analysis = wordGroupHtmls.map(wordGroupHtml => {
-      wordGroupHtml.map(x => {
-//        log debug (x)
-        val y = browser.parseString(x) >> element("a")
-        val grammarHint = new Regex("\\[(.+)\\]").findFirstIn(x)
-        val word = new DcsWord(root = y.text,
-          dcsId = y.attr("href").replaceAll(".*&IDWord=", "").toInt,
-          dcsGrammarHint = grammarHint)
-        word
+      val wordAnalysisMatches = wordAnalysisRegex.findAllIn(wordGroupHtml).matchData.toSeq
+
+//      log debug wordAnalysisMatches.mkString("|||")
+      wordAnalysisMatches.toSeq.map(subwordAnalysisMatch => DcsWord(root = subwordAnalysisMatch.group(2), dcsId = subwordAnalysisMatch.group(1).toInt, dcsGrammarHint = Some(subwordAnalysisMatch.group(3))))
       }).toSeq
-    }).toSeq
+
     sentence.dcsAnalysisDecomposition = Some(analysis)
     //    sentence.dcsAnalysis = Some(doc.toString)
     //    log.debug(sentence.toString)
