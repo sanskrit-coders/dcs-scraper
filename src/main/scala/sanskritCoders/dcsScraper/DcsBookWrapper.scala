@@ -1,13 +1,15 @@
 package sanskritCoders.dcsScraper
 
-import net.ruippeixotog.scalascraper.dsl.DSL._
 import dbSchema.dcs.{DcsBook, DcsChapter}
+import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
-import sanskritCoders.dcsScraper.dcsScraper.{browser, log}
+import org.slf4j.{Logger, LoggerFactory}
+import sanskritCoders.dcsScraper.dcsScraper.browser
 import sanskrit_coders.db.couchbaseLite.DcsCouchbaseLiteDB
 import sanskrit_coders.dcs.DcsDb
 
 class DcsBookWrapper(book: DcsBook) {
+  private val log: Logger = LoggerFactory.getLogger(getClass.getName)
   implicit def dcsChapterWrap(s: DcsChapter): DcsChapterWrapper = new DcsChapterWrapper(s)
   var chapterNames : Seq[String] = null
 
@@ -38,8 +40,9 @@ class DcsBookWrapper(book: DcsBook) {
     if (book.chapterIds.isEmpty ) {
       scrapeChapterList()
     }
-    log.info(s"Starting on book ${book.title}")
+    log.info(s"Starting on book ${book.title} with chaptersToStartFrom ${chaptersToStartFrom}.")
     require(!(chaptersToStartFrom.isDefined && updateChapterNotSentences == true))
+    require(chapterNames != null)
     var chapters = book.chapterIds.get.zip(chapterNames).map(x => new DcsChapter(dcsId = x._1, dcsName = Some(x._2)))
     chapters.foreach(_.scrapeChapter())
 //    log.info(chapters.map(x => s"${x.dcsId} ${x.dcsName}").mkString("\n"))

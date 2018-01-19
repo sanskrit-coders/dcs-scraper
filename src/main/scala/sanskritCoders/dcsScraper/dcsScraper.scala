@@ -1,20 +1,14 @@
 package sanskritCoders.dcsScraper
 
-import dbSchema.dcs.{DcsBook, DcsChapter, DcsSentence, DcsWord}
+import dbSchema.dcs.{DcsBook, DcsSentence}
 import net.ruippeixotog.scalascraper.browser.{Browser, JsoupBrowser}
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
 import org.slf4j.{Logger, LoggerFactory}
-import sanskritCoders.dcsScraper.dcsScraper.{browser, log}
 import sanskrit_coders.db.couchbaseLite.DcsCouchbaseLiteDB
+import sanskrit_coders.dcs.DcsDb
 
 import scala.collection.mutable
-import scala.util.matching.Regex
-
-
-
-
-
 
 
 object dcsScraper {
@@ -22,9 +16,10 @@ object dcsScraper {
 
   implicit def dcsSentenceWrap(s: DcsSentence): DcsSentenceWrapper = new DcsSentenceWrapper(s)
 
-  val log: Logger = LoggerFactory.getLogger(getClass.getName)
+  private val log: Logger = LoggerFactory.getLogger(getClass.getName)
   val browser: Browser = JsoupBrowser()
-  val dcsDb: DcsCouchbaseLiteDB = new DcsCouchbaseLiteDB
+//  val dcsDb: Either[DcsCouchbaseLiteDB, DcsDb] = Left(new DcsCouchbaseLiteDB())
+  val dcsDb: Either[DcsCouchbaseLiteDB, DcsDb] = Right(new DcsDb(serverLocation = "localhost:5984", userName = "vvasuki"))
 
 
   def scrapeBookList: Seq[DcsBook] = {
@@ -34,37 +29,59 @@ object dcsScraper {
     books
   }
 
-  def scrapeAll(incompleteBookTitle: Option[String] = None, chapterToStartFrom: Option[String] = None): Unit = {
+  def scrapeAll(incompleteBookTitle: Option[String] = None, chapterToStartFromInIncompleteBook: Option[String] = None,
+                bookTitleToEndWith: Option[String] = None): Unit = {
     var books = scrapeBookList
     var bookFailureMap = mutable.HashMap[String, Int]()
     if (incompleteBookTitle.isDefined) {
+      // Finish up the incomplete book.
       val incompleteBook = books.filter(_.title.startsWith(incompleteBookTitle.get)).head
-      bookFailureMap += Tuple2(incompleteBook.title, incompleteBook.storeChapters(dcsDb = Left(dcsDb), chaptersToStartFrom = chapterToStartFrom))
+      bookFailureMap += Tuple2(incompleteBook.title, incompleteBook.storeChapters(dcsDb = dcsDb, chaptersToStartFrom = chapterToStartFromInIncompleteBook))
       books = books.dropWhile(!_.title.startsWith(incompleteBookTitle.get)).drop(1)
+      // Now continue with the next book.
     }
+    if (bookTitleToEndWith.isDefined) {
+      val endBookSeq = books.filter(_.title.equals(bookTitleToEndWith.get))
+      books = books.takeWhile(!_.title.equals(bookTitleToEndWith.get)) ++ endBookSeq
+    }
+    log.info(s"${incompleteBookTitle}-${chapterToStartFromInIncompleteBook} to $bookTitleToEndWith")
+    log.info(s"Books count, minus the first if incompleteBookTitle was supplied: ${books.length}")
     books.foreach(book => {
-      bookFailureMap += Tuple2(book.title, book.storeChapters(dcsDb = Left(dcsDb)))
+      bookFailureMap += Tuple2(book.title, book.storeChapters(dcsDb = dcsDb))
     })
     log.error(s"Failures: ${bookFailureMap.mkString("\n")}")
   }
 
   def fillSentenceAnalyses(): Unit = {
     var numNoAnalysis = 0
-    dcsDb.getSentencesWithoutAnalysis().foreach(sentence => {
+
+    dcsDb.foreach(db => db.getSentences.foreach(sentence => {
       //      log debug s"before: $sentence"
       if (!sentence.scrapeAnalysis()) {
         numNoAnalysis += 1
       }
-      dcsDb.updateSentenceDb(sentence)
+      db.updateSentenceDb(sentence)
       //      log debug s"after: $sentence"
-    })
+    }))
     log info s"No analysis for $numNoAnalysis sentences"
   }
 
   def main(args: Array[String]): Unit = {
-    dcsDb.openDatabasesLaptop()
-    dcsDb.replicateAll()
-    scrapeAll()
-    dcsDb.closeDatabases
+    if (dcsDb.isLeft) {
+      dcsDb.left.get.openDatabasesLaptop()
+      dcsDb.left.get.replicateAll()
+    } else {
+      dcsDb.right.get.initialize()
+    }
+    // Start points:
+//    scrapeAll(incompleteBookTitle = Some("Agnipurāṇa"), chapterToStartFromInIncompleteBook = Some("12"), bookTitleToEndWith = Some("Bhāgavatapurāṇa"))
+    // scrapeAll(incompleteBookTitle = Some("Bhāratamañjarī"), chapterToStartFromInIncompleteBook = Some("7"), bookTitleToEndWith = Some("Ekākṣarakoṣa"))
+    // scrapeAll(incompleteBookTitle = Some("Garuḍapurāṇa"), chapterToStartFromInIncompleteBook = Some("15"), bookTitleToEndWith = Some("Liṅgapurāṇa"))
+//     scrapeAll(incompleteBookTitle = Some("Madanapālanighaṇṭu"), chapterToStartFromInIncompleteBook = None, bookTitleToEndWith = Some("Mṛgendraṭīkā"))
+//     scrapeAll(incompleteBookTitle = Some("Narmamālā"), chapterToStartFromInIncompleteBook = None, bookTitleToEndWith = Some("Pāśupatasūtra"))
+//    fillSentenceAnalyses
+    if (dcsDb.isLeft) {
+      dcsDb.left.get.closeDatabases
+    }
   }
 }

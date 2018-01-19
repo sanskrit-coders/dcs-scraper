@@ -1,4 +1,6 @@
 <configuration>
+    <logger name="org.apache" level="WARN" />
+    <logger name="httpclient" level="WARN" />
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <!-- encoders are assigned the type
      ch.qos.logback.classic.encoder.PatternLayoutEncoder by default

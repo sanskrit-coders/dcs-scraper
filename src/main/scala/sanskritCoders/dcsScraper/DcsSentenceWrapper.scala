@@ -1,9 +1,11 @@
 package sanskritCoders.dcsScraper
 
 import dbSchema.dcs.{DcsSentence, DcsWord}
+import org.slf4j.{Logger, LoggerFactory}
 import sanskritCoders.dcsScraper.dcsScraper.browser
 
 class DcsSentenceWrapper(sentence: DcsSentence) {
+  private val log: Logger = LoggerFactory.getLogger(getClass.getName)
   //  <a href="index.php?contents=lemma&IDWord=96104"target="_blank">tadā</a> [indecl.]-
   //    <a href="index.php?contents=lemma&IDWord=159581"target="_blank">majj</a> [3. sg. athem. s-Aor.]&nbsp;&nbsp;
   //  <a href="index.php?contents=lemma&IDWord=51708"target="_blank">cintā</a> [comp.]-

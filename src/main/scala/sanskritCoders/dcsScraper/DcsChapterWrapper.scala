@@ -1,13 +1,15 @@
 package sanskritCoders.dcsScraper
 
 import dbSchema.dcs.{DcsChapter, DcsSentence}
-import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
-import sanskritCoders.dcsScraper.dcsScraper.{browser, log}
-import sanskrit_coders.db.couchbaseLite.DcsCouchbaseLiteDB
 import net.ruippeixotog.scalascraper.dsl.DSL._
+import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
+import org.slf4j.{Logger, LoggerFactory}
+import sanskritCoders.dcsScraper.dcsScraper.browser
+import sanskrit_coders.db.couchbaseLite.DcsCouchbaseLiteDB
 import sanskrit_coders.dcs.DcsDb
 
 class DcsChapterWrapper(chapter: DcsChapter) {
+  private val log: Logger = LoggerFactory.getLogger(getClass.getName)
   implicit def dcsSentenceWrap(s: DcsSentence) = new DcsSentenceWrapper(s)
 
   def scrapeChapter(): Unit = {
