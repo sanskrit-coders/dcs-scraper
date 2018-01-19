@@ -12,8 +12,8 @@ libraryDependencies ++= Seq(
   ,"ch.qos.logback" % "logback-core" % "0.9.29"
   , "net.ruippeixotog" % "scala-scraper_2.12" % "2.0.0"
   ,"com.github.sanskrit-coders" % "indic-transliteration_2.12" % "1.9"
-  ,"com.github.sanskrit-coders" % "couchbase-lite-desktop_2.12" % "1.4"
-//  ,"com.github.sanskrit-coders" % "couchdb-client_2.12" % "0.3"
+  ,"com.github.sanskrit-coders" % "couchbase-lite-desktop_2.12" % "1.6"
+  ,"com.github.sanskrit-coders" % "couchdb-client_2.12" % "0.3"
     ,"com.github.sanskrit-coders" % "db-interface_2.12" % "3.1"
   , "me.tongfei" % "progressbar" % "0.5.5"
 )
