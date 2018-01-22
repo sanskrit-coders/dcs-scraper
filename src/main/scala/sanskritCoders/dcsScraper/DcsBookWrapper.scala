@@ -35,18 +35,18 @@ class DcsBookWrapper(book: DcsBook) {
     dcsDb.updateBooksDb(book)
   }
 
-  def storeChapters(dcsDb: Either[DcsCouchbaseLiteDB, DcsDb], chaptersToStartFrom: Option[String] = None, updateChapterNotSentences: Boolean = false): Int = {
+  def storeChapters(dcsDb: Either[DcsCouchbaseLiteDB, DcsDb], chapterTitleToStartFrom: Option[String] = None, updateChapterNotSentences: Boolean = false): Int = {
     var numSentenceFailures = 0
     if (book.chapterIds.isEmpty ) {
       scrapeChapterList()
     }
-    log.info(s"Starting on book ${book.title} with chaptersToStartFrom ${chaptersToStartFrom}.")
-    require(!(chaptersToStartFrom.isDefined && updateChapterNotSentences == true))
+    log.info(s"Starting on book ${book.title} with chaptersToStartFrom ${chapterTitleToStartFrom}.")
+    require(!(chapterTitleToStartFrom.isDefined && updateChapterNotSentences == true))
     require(chapterNames != null)
     var chapters = book.chapterIds.get.zip(chapterNames).map(x => new DcsChapter(dcsId = x._1, dcsName = Some(x._2)))
     chapters.foreach(_.scrapeChapter())
 //    log.info(chapters.map(x => s"${x.dcsId} ${x.dcsName}").mkString("\n"))
-    chapters = chapters.dropWhile(x => chaptersToStartFrom.isDefined && !x.dcsName.contains(chaptersToStartFrom.get))
+    chapters = chapters.dropWhile(x => chapterTitleToStartFrom.isDefined && !x.dcsName.contains(chapterTitleToStartFrom.get))
     if (updateChapterNotSentences) {
       chapters.foreach(_.storeChapter(dcsDb))
     } else {
