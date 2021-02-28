@@ -13,6 +13,9 @@
   - [Links to general comments](#links-to-general-comments)
 
 # Introduction
+## Possible Deprecation
+- See https://github.com/OliverHellwig/sanskrit/tree/master/dcs/data . Data is available in Google Drive (dated 2018 as of 2021.)
+
 ## Goals
   * Reconstruct database behind [DCS](http://kjc-sv013.kjc.uni-heidelberg.de/dcs)
   * Present it in a format better suited for consumption by the broader Sanskrit programming community.
